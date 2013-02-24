@@ -1,6 +1,6 @@
 <?php
 
-namespace Spark\Controller\ActionHelper;
+namespace Spark\ActionPack\ActionHelper;
 
 trait Layout
 {

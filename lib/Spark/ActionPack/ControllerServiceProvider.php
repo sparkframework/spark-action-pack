@@ -3,7 +3,6 @@
 namespace Spark\ActionPack;
 
 use Silex\Application;
-use Silex\Provider\TwigServiceProvider;
 
 class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
 {

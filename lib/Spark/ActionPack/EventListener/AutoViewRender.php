@@ -1,14 +1,14 @@
 <?php
 
-namespace Spark\Controller\EventListener;
+namespace Spark\ActionPack\EventListener;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\GetResponseForControllerResultEvent;
 use Symfony\Component\HttpFoundation\Response;
 
-use Spark\Controller\RenderPipeline;
-use Spark\Controller\ViewContext;
+use Spark\ActionPack\RenderPipeline;
+use Spark\ActionPack\ViewContext;
 
 class AutoViewRender implements EventSubscriberInterface
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Spark\Controller\EventListener;
+namespace Spark\ActionPack\EventListener;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
@@ -8,7 +8,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 use Silex\Application;
-use Spark\Core\ApplicationAware;
+use Spark\ActionPack\ApplicationAware;
 
 class ControllerClassResolver implements EventSubscriberInterface
 {

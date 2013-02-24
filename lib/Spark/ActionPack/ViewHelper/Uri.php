@@ -1,6 +1,6 @@
 <?php
 
-namespace Spark\Controller\ViewHelper;
+namespace Spark\ActionPack\ViewHelper;
 
 trait Uri
 {

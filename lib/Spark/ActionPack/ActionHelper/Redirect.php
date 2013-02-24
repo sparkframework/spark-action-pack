@@ -1,6 +1,6 @@
 <?php
 
-namespace Spark\Controller\ActionHelper;
+namespace Spark\ActionPack\ActionHelper;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
