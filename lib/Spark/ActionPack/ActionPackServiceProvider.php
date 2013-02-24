@@ -9,8 +9,8 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
     function register(Application $app)
     {
         $app['spark.action_pack.view_context'] = $app->share(function($app) {
-            $class = isset($app['spark.view_context_class'])
-                ? $app['spark.view_context_class']
+            $class = isset($app['spark.action_pack.view_context_class'])
+                ? $app['spark.action_pack.view_context_class']
                 : '\\Spark\\Controller\\ViewContext';
 
             return new $class($app);
@@ -22,16 +22,16 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
         });
 
         $app['spark.action_pack.render_pipeline'] = $app->share(function($app) {
-            $render = new RenderPipeline($app['spark.view_context'], $app['spark.view_path']);
+            $render = new RenderPipeline($app['spark.action_pack.view_context'], $app['spark.action_pack.view_path']);
 
             return $render;
         });
 
         $app["dispatcher"] = $app->extend("dispatcher", function($dispatcher, $app) {
-            $dispatcher->addSubscriber($app['spark.controller_class_resolver']);
+            $dispatcher->addSubscriber($app['spark.action_pack.controller_class_resolver']);
 
             $dispatcher->addSubscriber(new EventListener\AutoViewRender(
-                $app['spark.render_pipeline'], $app['spark.controller_class_resolver']
+                $app['spark.action_pack.render_pipeline'], $app['spark.action_pack.controller_class_resolver']
             ));
 
             return $dispatcher;

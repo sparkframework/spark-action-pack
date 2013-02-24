@@ -1,9 +1,11 @@
 <?php
 
-namespace Spark\ActionPack;
+namespace Spark\ActionPack\Controller;
 
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Response;
+use Spark\ActionPack\ApplicationAwareController;
+use Spark\ActionPack\ActionHelper;
 
 abstract class Base implements ApplicationAwareController
 {

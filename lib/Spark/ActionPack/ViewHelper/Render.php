@@ -18,7 +18,7 @@ trait Render
 
         $context->parent = null;
 
-        $render = $this->application['spark.render_pipeline'];
+        $render = $this->application['spark.action_pack.render_pipeline'];
 
         if ($collection = @$options['collection']) {
             $returnValue = '';
