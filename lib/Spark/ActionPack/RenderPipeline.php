@@ -3,6 +3,8 @@
 namespace Spark\ActionPack;
 
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\EventDispatcher;
+use Spark\ActionPack\View;
 use CHH\FileUtils\PathStack;
 
 class RenderPipeline
@@ -25,29 +27,26 @@ class RenderPipeline
     public $scriptPath;
 
     /**
+     * Event Dispatcher
+     * @var EventDispatcher\EventDispatcher
+     */
+    protected $dispatcher;
+
+    /**
      * View Context Prototype
      */
     protected $defaultContext;
 
     /**
-     * Handler by content type
-     */
-    protected $contentTypeHandlers = [];
-
-    /**
-     * Handlers which are invoked when the content type has no
-     * registered handler.
-     */
-    protected $fallbackHandlers = [];
-
-    /**
      * Constructor
      *
+     * @param EventDispatcher\EventDispatcher $dispatcher
      * @param ViewContext $defaultContext
      * @param array $scriptPath Array of lookup paths for view scripts
      */
-    function __construct(ViewContext $defaultContext, $scriptPath = null)
+    function __construct(EventDispatcher\EventDispatcher $dispatcher, ViewContext $defaultContext, $scriptPath = null)
     {
+        $this->dispatcher = $dispatcher;
         $this->scriptPath = new PathStack();
 
         if ($scriptPath !== null) {
@@ -62,97 +61,39 @@ class RenderPipeline
         $this->layout->script = "default";
     }
 
-    /**
-     * Adds a format handler
-     *
-     * @param string $contentType
-     * @param callable $handler Handler to call when this content type
-     * gets rendered.
-     *
-     * @return RenderPipeline
-     */
-    function addFormat($contentType, callable $handler)
+    function addStrategy($strategy)
     {
-        $this->contentTypeHandlers[$contentType][] = $handler;
+        if (is_callable($strategy)) {
+            $this->dispatcher->addListener(View\ViewEvents::RENDER, $strategy);
+        } else if ($strategy instanceof EventDispatcher\EventSubscriberInterface) {
+            $this->dispatcher->addSubscriber($strategy);
+        } else {
+            throw new \InvalidArgumentException("Strategy must be either a callable or"
+                . " implement Symfony\\Component\\EventDispatcher\\EventSubscriberInterface");
+        }
+
         return $this;
-    }
-
-    function addFallback(callable $handler)
-    {
-        $this->fallbackHandlers[] = $handler;
-        return $this;
-    }
-
-    function renderContext(ViewContext $context)
-    {
-        $format = $context->format;
-        $handlers = [];
-
-        $scriptPath = clone $this->scriptPath;
-
-        if ($context->script) {
-            $context->script = $this->scriptPath->find($context->script);
-        }
-
-        if ($contentType = @$this->formats[$format] and isset($this->contentTypeHandlers[$contentType])) {
-            $handlers = array_merge($handlers, $this->contentTypeHandlers[$contentType]);
-        }
-
-        $handlers = array_merge($handlers, $this->fallbackHandlers);
-
-        foreach ($handlers as $handler) {
-            $returnValue = $handler($context);
-
-            if (null !== $returnValue) {
-                break;
-            }
-        }
-
-        if ($context->parent) {
-            foreach ($context->blocks() as $block => $content) {
-                $context->parent->setBlock($block, $content);
-            }
-
-            $context->parent->setBlock('content', $returnValue);
-            return $this->renderContext($context->parent);
-        }
-
-        return $returnValue;
     }
 
     function render($options = [], Response $response = null)
     {
-        $format = key(array_intersect_key($this->formats, $options)) ?: "html";
+        $context = $this->createContext();
 
-        $response = $response ?: new Response;
-
-        $viewContext = $this->createContext();
-        $viewContext->response = $response;
-
-        if (isset($options['script'])) {
-            $viewContext->script = $options['script'];
+        if ($this->renderLayout) {
+            $context->parent = $this->layout;
         }
 
-        $viewContext->format = $format;
-        $viewContext->context = @$options['context'];
-        $viewContext->options = $options;
+        $context->model = @$options['model'] ?: new \stdClass;
 
-        if ($this->renderLayout and @$options['layout'] !== false) {
-            $viewContext->parent = clone $this->layout;
+        $event = new View\RenderEvent($context, $options);
 
-            if (!empty($options['layout'])) {
-                $viewContext->parent->script = $options['layout'];
-            }
+        if (null !== $response) {
+            $event->setResponse($response);
         }
 
-        $response->setContent($this->renderContext($viewContext));
+        $this->dispatcher->dispatch(View\ViewEvents::RENDER, $event);
 
-        if (!$response->headers->has('Content-Type')) {
-            $contentType = $this->formats[$format];
-            $response->headers->set('Content-Type', $contentType);
-        }
-
-        return $response;
+        return $event->getResponse();
     }
 
     protected function createContext()

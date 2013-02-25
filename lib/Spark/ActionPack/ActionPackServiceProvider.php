@@ -18,11 +18,14 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
 
         $app['spark.action_pack.controller_class_resolver'] = $app->share(function($app) {
             $resolver = new EventListener\ControllerClassResolver($app);
+
             return $resolver;
         });
 
         $app['spark.action_pack.render_pipeline'] = $app->share(function($app) {
-            $render = new RenderPipeline($app['spark.action_pack.view_context'], $app['spark.action_pack.view_path']);
+            $render = new RenderPipeline($app['dispatcher'], $app['spark.action_pack.view_context'], $app['spark.action_pack.view_path']);
+            $render->addStrategy(new View\JsonStrategy);
+            $render->addStrategy(new View\TextStrategy);
 
             return $render;
         });
@@ -43,17 +46,17 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
         $app->error(function(\Exception $e, $code) use ($app) {
             $renderPipeline = $app['spark.action_pack.render_pipeline'];
 
-            if (!empty($app['logger'])) {
+            if (isset($app['logger'])) {
                 $app['logger']->addError($e);
             }
 
             if ($script = $renderPipeline->scriptPath->find("error/$code")) {
-                $context = (object) [
+                $view = (object) [
                     'exception' => $e,
                     'code' => $code
                 ];
 
-                return $renderPipeline->render(['script' => "error/$code", 'context' => $context]);
+                return $renderPipeline->render(['script' => "error/$code", 'model' => $view]);
             }
         });
     }

@@ -39,7 +39,7 @@ class AutoViewRender implements EventSubscriberInterface
             return new Response((string) $result);
         }
 
-        if ($attributes->get('spark.disable_autorender', false)) {
+        if (!$attributes->get('spark.action_pack.autorender', true)) {
             return;
         }
 
@@ -60,7 +60,7 @@ class AutoViewRender implements EventSubscriberInterface
 
         $response = $this->renderPipeline->render([
             'script' => "$controllerName/$actionName",
-            'context' => $controller
+            'model' => $controller
         ], $response);
 
         $event->setResponse($response);

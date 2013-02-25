@@ -66,6 +66,8 @@ abstract class Base implements ApplicationAwareController
             $options = ['script' => $script];
         }
 
+        $options['model'] = $this;
+
         if (isset($options['status'])) {
             $this->response()->setStatusCode($options['status']);
             unset($options['status']);
