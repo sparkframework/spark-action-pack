@@ -8,7 +8,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 use Silex\Application;
-use Spark\ActionPack\ApplicationAware;
+use Spark\ActionPack\ApplicationAwareController;
 
 class ControllerClassResolver implements EventSubscriberInterface
 {
@@ -47,6 +47,7 @@ class ControllerClassResolver implements EventSubscriberInterface
     {
         $request = $event->getRequest();
         $current = $request->attributes->get('_controller');
+        $moduleName = $this->defaultModule;
 
         # If controller is already callable, then we don't need to do anything
         if (is_callable($current)) {
@@ -60,15 +61,17 @@ class ControllerClassResolver implements EventSubscriberInterface
         if (false !== strpos($current, '#')) {
             list($controllerName, $actionName) = explode('#', $current);
 
+            if (false !== strpos($controllerName, '::')) {
+                list($moduleName, $controllerName) = explode('::', $controllerName);
+            }
         } elseif ($request->attributes->has('controller')) {
             $controllerName = $request->attributes->get('controller');
             $actionName = $request->attributes->get('action');
+            $moduleName = $request->attributes->get('module', $this->defaultModule);
         }
 
-        $moduleName = $request->attributes->get('module', $this->defaultModule);
-
         $route = $this->application['routes']->get($request->attributes->get('_route'));
-        $action = $this->camelize($actionName) . "Action";
+        $action = $this->camelize($actionName, false) . "Action";
 
         $controller = $this->getController($controllerName, $moduleName);
 
@@ -94,9 +97,13 @@ class ControllerClassResolver implements EventSubscriberInterface
         }
     }
 
-    protected function camelize($string)
+    protected function camelize($string, $upperCaseFirst = true)
     {
         $camelized = str_replace(' ', '', ucwords(str_replace('_', ' ', $string)));
+
+        if (!$upperCaseFirst) {
+            $camelized = lcfirst($camelized);
+        }
 
         return $camelized;
     }
@@ -128,7 +135,7 @@ class ControllerClassResolver implements EventSubscriberInterface
         } else {
             $controller = new $class;
 
-            if ($controller instanceof ApplicationAware or is_callable([$controller, "setApplication"])) {
+            if ($controller instanceof ApplicationAwareController or is_callable([$controller, "setApplication"])) {
                 $controller->setApplication($this->application);
             }
 

@@ -28,7 +28,7 @@ class ControllerCollection extends \Silex\ControllerCollection
     protected $scopes = [];
 
     /**
-     * Scopes all routes in the collection to the given prefix
+     * Scopes all routes in the collection to the given path
      *
      * Example:
      *
@@ -51,7 +51,6 @@ class ControllerCollection extends \Silex\ControllerCollection
 
         return $this;
     }
-
 
     /**
      * Invokes the callback with the collection as argument
@@ -98,7 +97,7 @@ class ControllerCollection extends \Silex\ControllerCollection
     }
 
     /**
-     * Define resource routes for a plural resource.
+     * Define routes for a collection of resources.
      *
      * Example:
      *

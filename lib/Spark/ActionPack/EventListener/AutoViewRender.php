@@ -35,8 +35,8 @@ class AutoViewRender implements EventSubscriberInterface
 
         $result = $event->getControllerResult();
 
-        if (!empty($result)) {
-            return new Response((string) $result);
+        if (is_string($result)) {
+            return new Response($result);
         }
 
         if (!$attributes->get('spark.action_pack.autorender', true)) {
