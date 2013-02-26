@@ -15,13 +15,8 @@ class ViewContext
     /** @var ViewContext Parent context, if available */
     public $parent;
 
-    /** @var Application */
-    protected $application;
-
-    function __construct(\Silex\Application $app)
+    function __construct()
     {
-        $this->application = $app;
         $this->model = (object) [];
     }
 }
-

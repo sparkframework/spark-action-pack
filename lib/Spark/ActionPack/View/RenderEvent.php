@@ -5,7 +5,7 @@ namespace Spark\ActionPack\View;
 use Symfony\Component\EventDispatcher;
 use Symfony\Component\HttpFoundation;
 
-class ViewEvent extends EventDispatcher\Event
+class RenderEvent extends EventDispatcher\Event
 {
     protected $options;
     protected $response;
@@ -21,7 +21,7 @@ class ViewEvent extends EventDispatcher\Event
         return $this->context;
     }
 
-    function getOption($option, $default = null)
+    function getOption($option, $defaultValue = null)
     {
         if (array_key_exists($option, $this->options)) {
             return $this->options[$option];

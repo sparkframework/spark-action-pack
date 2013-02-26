@@ -4,7 +4,7 @@ namespace Spark\ActionPack\View;
 
 use Symfony\Component\HttpFoundation;
 
-class JsonStrategy extends RenderStrategy
+class TextStrategy extends RenderStrategy
 {
     function onRender(RenderEvent $event)
     {

@@ -2,6 +2,7 @@
 
 namespace Spark\ActionPack\EventListener;
 
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\GetResponseForControllerResultEvent;
@@ -12,7 +13,7 @@ use Spark\ActionPack\ViewContext;
 
 class AutoViewRender implements EventSubscriberInterface
 {
-    protected $renderPipeline;
+    protected $dispatcher;
     protected $resolver;
 
     static function getSubscribedEvents()
@@ -22,9 +23,9 @@ class AutoViewRender implements EventSubscriberInterface
         ];
     }
 
-    function __construct(RenderPipeline $render, ControllerClassResolver $resolver)
+    function __construct(EventDispatcherInterface $dispatcher, ControllerClassResolver $resolver)
     {
-        $this->renderPipeline = $render;
+        $this->dispatcher = $dispatcher;
         $this->resolver = $resolver;
     }
 
@@ -56,13 +57,15 @@ class AutoViewRender implements EventSubscriberInterface
             return;
         }
 
-        $response = $controller->response();
+        $context = new View\ViewContext;
+        $context->script = "$controllerName/$actionName";
+        $context->model = $controller;
 
-        $response = $this->renderPipeline->render([
-            'script' => "$controllerName/$actionName",
-            'model' => $controller
-        ], $response);
+        $renderEvent = new View\RenderEvent($context, []);
+        $renderEvent->setResponse($controller->response());
 
-        $event->setResponse($response);
+        $this->dispatcher->dispatch(View\ViewEvents::RENDER, $renderEvent);
+
+        $event->setResponse($renderEvent->getResponse());
     }
 }

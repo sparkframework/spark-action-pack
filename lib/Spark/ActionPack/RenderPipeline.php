@@ -44,7 +44,7 @@ class RenderPipeline
      * @param ViewContext $defaultContext
      * @param array $scriptPath Array of lookup paths for view scripts
      */
-    function __construct(EventDispatcher\EventDispatcher $dispatcher, ViewContext $defaultContext, $scriptPath = null)
+    function __construct(EventDispatcher\EventDispatcher $dispatcher, View\ViewContext $defaultContext, $scriptPath = null)
     {
         $this->dispatcher = $dispatcher;
         $this->scriptPath = new PathStack();

@@ -47,7 +47,7 @@ class ControllerClassResolver implements EventSubscriberInterface
     {
         $request = $event->getRequest();
         $current = $request->attributes->get('_controller');
-        $moduleName = $this->defaultModule;
+        $moduleName = $request->attributes->get('module', $this->defaultModule);
 
         # If controller is already callable, then we don't need to do anything
         if (is_callable($current)) {
@@ -67,7 +67,6 @@ class ControllerClassResolver implements EventSubscriberInterface
         } elseif ($request->attributes->has('controller')) {
             $controllerName = $request->attributes->get('controller');
             $actionName = $request->attributes->get('action');
-            $moduleName = $request->attributes->get('module', $this->defaultModule);
         }
 
         $route = $this->application['routes']->get($request->attributes->get('_route'));
