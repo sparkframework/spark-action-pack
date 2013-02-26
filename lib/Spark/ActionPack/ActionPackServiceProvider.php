@@ -30,6 +30,10 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
             return $render;
         });
 
+        $app['spark.action_pack.view.helpers'] = $app->share(function() use ($app) {
+            return new \Pimple;
+        });
+
         $app["dispatcher"] = $app->extend("dispatcher", function($dispatcher, $app) {
             $dispatcher->addSubscriber($app['spark.action_pack.controller_class_resolver']);
 
