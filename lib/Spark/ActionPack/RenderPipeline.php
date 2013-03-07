@@ -16,11 +16,6 @@ class RenderPipeline
         'xml' => 'application/xml'
     ];
 
-    public $layout;
-
-    /** Enable/Disable layout rendering */
-    public $renderLayout = true;
-
     /**
      * @var PathStack
      */
@@ -44,21 +39,10 @@ class RenderPipeline
      * @param ViewContext $defaultContext
      * @param array $scriptPath Array of lookup paths for view scripts
      */
-    function __construct(EventDispatcher\EventDispatcher $dispatcher, View\ViewContext $defaultContext, $scriptPath = null)
+    function __construct(EventDispatcher\EventDispatcherInterface $dispatcher, View\ViewContext $defaultContext, $scriptPath = null)
     {
         $this->dispatcher = $dispatcher;
-        $this->scriptPath = new PathStack();
-
-        if ($scriptPath !== null) {
-            $this->scriptPath->appendPaths($scriptPath);
-        }
-
-        $this->scriptPath->appendExtensions(['.phtml', '.html.php']);
-
         $this->defaultContext = $defaultContext;
-
-        $this->layout = $this->createContext();
-        $this->layout->script = "default";
     }
 
     function addStrategy($strategy)
@@ -75,16 +59,8 @@ class RenderPipeline
         return $this;
     }
 
-    function render($options = [], Response $response = null)
+    function renderContext(View\ViewContext $context, array $options = [], Response $response = null)
     {
-        $context = $this->createContext();
-
-        if ($this->renderLayout) {
-            $context->parent = $this->layout;
-        }
-
-        $context->model = @$options['model'] ?: new \stdClass;
-
         $event = new View\RenderEvent($context, $options);
 
         if (null !== $response) {
@@ -94,6 +70,20 @@ class RenderPipeline
         $this->dispatcher->dispatch(View\ViewEvents::RENDER, $event);
 
         return $event->getResponse();
+    }
+
+    function render($options = [], Response $response = null)
+    {
+        $context = $this->createContext();
+
+        if ($this->renderLayout and @$options['layout'] !== false) {
+            $context->parent = $this->layout;
+        }
+
+        $context->script = @$options['script'];
+        $context->model = @$options['model'] ?: new \stdClass;
+
+        return $this->renderContext($context, $options, $response);
     }
 
     protected function createContext()

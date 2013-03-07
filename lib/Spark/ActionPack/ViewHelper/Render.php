@@ -2,6 +2,8 @@
 
 namespace Spark\ActionPack\ViewHelper;
 
+use Spark\ActionPack\View;
+
 class Render extends Base
 {
     function __invoke($script, array $options = [])
@@ -11,29 +13,39 @@ class Render extends Base
 
     function render($script, array $options = [])
     {
-        $options = ['layout' => false];
+        $helpers = $this->application['spark.action_pack.view.helpers'];
+        $context = clone $helpers['view_context'];
+        unset($context->parent);
 
         if (strpos($script, '/') !== false) {
             $partial = basename($script);
-            $options['script'] = dirname($script) . "_$partial";
+            $context->script = dirname($script) . "_$partial";
         } else {
             $controllerName = $this->application['request']->attributes->get('controller');
-            $options['script'] = "$controllerName/_$script";
+            $context->script = "$controllerName/_$script";
         }
-
-        $render = $this->application['spark.render_pipeline'];
 
         if ($collection = @$options['collection']) {
             $returnValue = '';
 
-            foreach ($collection as $entry) {
-                $options['model'] = $entry;
-                $returnValue .= $render->render($options)->getContent();
+            foreach ($collection as $item) {
+                $c = clone $context;
+                $c->model = $item;
+
+                $returnValue .= $this->renderContext($c);
             }
 
             return $returnValue;
         }
 
-        return $render->render($options)->getContent();
+        return $this->renderContext($context);
+    }
+
+    protected function renderContext(View\ViewContext $context, array $options = [])
+    {
+        $event = new View\RenderEvent($context, $options);
+        $this->application['dispatcher']->dispatch(View\ViewEvents::RENDER, $event);
+
+        return $event->getResponse()->getContent();
     }
 }

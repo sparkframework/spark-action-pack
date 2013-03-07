@@ -2,7 +2,7 @@
 
 namespace Spark\ActionPack\ViewHelper;
 
-class Assets extends Base
+class Asset extends Base
 {
     function link($logicalPath)
     {

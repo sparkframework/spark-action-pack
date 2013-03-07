@@ -115,7 +115,7 @@ class ControllerCollection extends \Silex\ControllerCollection
      * | GET    /posts/{id}/edit | posts#edit    |
      * | POST   /posts           | posts#create  |
      * | PUT    /posts/{id}      | posts#update  |
-     * | DELETE /posts/{id}      | posts#delete  |
+     * | DELETE /posts/{id}      | posts#destroy |
      *
      * @param string $resourceName
      * @param array $options

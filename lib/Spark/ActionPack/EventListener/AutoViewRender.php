@@ -9,12 +9,13 @@ use Symfony\Component\HttpKernel\Event\GetResponseForControllerResultEvent;
 use Symfony\Component\HttpFoundation\Response;
 
 use Spark\ActionPack\RenderPipeline;
-use Spark\ActionPack\ViewContext;
+use Spark\ActionPack\View;
 
 class AutoViewRender implements EventSubscriberInterface
 {
     protected $dispatcher;
     protected $resolver;
+    protected $layout;
 
     static function getSubscribedEvents()
     {
@@ -23,10 +24,11 @@ class AutoViewRender implements EventSubscriberInterface
         ];
     }
 
-    function __construct(EventDispatcherInterface $dispatcher, ControllerClassResolver $resolver)
+    function __construct(EventDispatcherInterface $dispatcher, ControllerClassResolver $resolver, View\ViewContext $layout)
     {
         $this->dispatcher = $dispatcher;
         $this->resolver = $resolver;
+        $this->layout = $layout;
     }
 
     function renderView(GetResponseForControllerResultEvent $event)
@@ -61,11 +63,17 @@ class AutoViewRender implements EventSubscriberInterface
         $context->script = "$controllerName/$actionName";
         $context->model = $controller;
 
+        if ($request->attributes->get('spark.action_pack.render_layout', true)) {
+            $context->parent = $this->layout;
+        }
+
         $renderEvent = new View\RenderEvent($context, []);
         $renderEvent->setResponse($controller->response());
 
         $this->dispatcher->dispatch(View\ViewEvents::RENDER, $renderEvent);
 
-        $event->setResponse($renderEvent->getResponse());
+        if ($renderEvent->isPropagationStopped()) {
+            $event->setResponse($renderEvent->getResponse());
+        }
     }
 }

@@ -3,13 +3,21 @@
 namespace Spark\ActionPack;
 
 use Silex\Application;
+use CHH\FileUtils\PathStack;
 
 class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
 {
     function register(Application $app)
     {
-        $app['spark.action_pack.view_context'] = $app->share(function() {
+        $app['spark.action_pack.view_context'] = function() {
             return new View\ViewContext;
+        };
+
+        $app['spark.action_pack.layout'] = $app->share(function() use ($app) {
+            $layout = $app['spark.action_pack.view_context'];
+            $layout->script = "default";
+
+            return $layout;
         });
 
         $app['spark.action_pack.controller_class_resolver'] = $app->share(function($app) {
@@ -18,36 +26,37 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
             return $resolver;
         });
 
-        $app['spark.action_pack.render_pipeline'] = $app->share(function($app) {
-            $render = new RenderPipeline($app['dispatcher'], $app['spark.action_pack.view_context'], $app['spark.action_pack.view_path']);
-            $render->addStrategy(new View\JsonStrategy);
-            $render->addStrategy(new View\TextStrategy);
+        $app['spark.action_pack.view.script_path'] = $app->share(function() use ($app) {
+            $path = new PathStack();
+            $path->appendPaths($app['spark.action_pack.view_path']);
 
-            return $render;
+            return $path;
         });
 
         $app['spark.action_pack.view.helpers'] = $app->share(function() use ($app) {
             $helpers = new \Pimple;
 
-            $helpers['assets'] = function() use ($app) {
-                return new ViewHelper\Assets($app);
-            };
+            $helpers['app'] = $app;
 
-            $helpers['flash'] = function() use ($app) {
+            $helpers['asset'] = $helpers->share(function() use ($app) {
+                return new ViewHelper\Asset($app);
+            });
+
+            $helpers['flash'] = $helpers->share(function() use ($app) {
                 return new ViewHelper\Flash($app);
-            };
+            });
 
-            $helpers['render'] = function() use ($app) {
+            $helpers['render'] = $helpers->share(function() use ($app) {
                 return new ViewHelper\Render($app);
-            };
+            });
 
-            $helpers['block'] = function() use ($app) {
+            $helpers['block'] = $helpers->share(function() use ($app) {
                 return new ViewHelper\Block($app);
-            };
+            });
 
-            $helpers['path'] = function() use ($app) {
+            $helpers['path'] = $helpers->share(function() use ($app) {
                 return new ViewHelper\Path($app);
-            };
+            });
 
             return $helpers;
         });
@@ -56,8 +65,15 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
             $dispatcher->addSubscriber($app['spark.action_pack.controller_class_resolver']);
 
             $dispatcher->addSubscriber(new EventListener\AutoViewRender(
-                $dispatcher, $app['spark.action_pack.controller_class_resolver']
+                $dispatcher,
+                $app['spark.action_pack.controller_class_resolver'],
+                $app['spark.action_pack.layout']
             ));
+
+            # Register default view rendering strategies
+            $dispatcher->addSubscriber(new View\JsonStrategy);
+            $dispatcher->addSubscriber(new View\TextStrategy);
+            $dispatcher->addSubscriber(new View\RawHtmlStrategy);
 
             return $dispatcher;
         });
@@ -66,20 +82,28 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
     function boot(Application $app)
     {
         $app->error(function(\Exception $e, $code) use ($app) {
-            $renderPipeline = $app['spark.action_pack.render_pipeline'];
-
-            var_dump($e);
-            if (isset($app['logger']) and null !== $app['logger']) {
-                $app['logger']->addError($e);
+            if (isset($app['monolog']) and null !== $app['monolog']) {
+                $app['monolog']->addError($e);
             }
 
-            if ($script = $renderPipeline->scriptPath->find("error/$code")) {
+            $scriptPath = $app['spark.action_pack.view.script_path'];
+
+            if ($scriptPath->find("error/$code")) {
                 $view = (object) [
                     'exception' => $e,
                     'code' => $code
                 ];
 
-                return $renderPipeline->render(['script' => "error/$code", 'model' => $view]);
+                $context = $app['spark.action_pack.view_context'];
+                $context->script = "error/$code";
+                $context->model = $view;
+
+                $event = new View\RenderEvent($context, []);
+                $app['dispatcher']->dispatch(View\ViewEvents::RENDER, $event);
+
+                if ($event->isPropagationStopped()) {
+                    return $event->getResponse();
+                }
             }
         });
     }

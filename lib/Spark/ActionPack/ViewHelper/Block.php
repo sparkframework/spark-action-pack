@@ -2,6 +2,9 @@
 
 namespace Spark\ActionPack\ViewHelper;
 
+use Silex\Application;
+use Spark\ActionPack\View;
+
 class Block extends Base
 {
     protected $capturing;
@@ -21,12 +24,41 @@ class Block extends Base
 
     function get($name)
     {
-        return @$this->blocks[$name];
+        return $this->_get($this->context(), $name);
     }
 
-    function set($name, $content)
+    protected function _get(View\ViewContext $context, $name)
     {
-        $this->blocks[$name] = $content;
+        $blocks = $context->attributes->get('blocks', []);
+
+        if ($content = @$blocks[$name]) {
+            return $blocks[$name];
+        }
+
+        if (isset($context->parent)) {
+            return $this->_get($context->parent, $name);
+        }
+    }
+
+    function super($name)
+    {
+        $context = $this->context();
+
+        if (isset($context->parent)) {
+            return $this->_get($context->parent, $name);
+        }
+    }
+
+    function set($name, $content, View\ViewContext $context = null)
+    {
+        if (null === $context) {
+            $context = $this->context();
+        }
+
+        $blocks = $context->attributes->get('blocks', []);
+        $blocks[$name] = $content;
+
+        $context->attributes->set('blocks', $blocks);
     }
 
     function start($name)
@@ -43,7 +75,7 @@ class Block extends Base
         }
 
         $content = ob_get_clean();
-        $this->blocks[$name] = $content;
+        $this->set($name, $content);
 
         return $this;
     }

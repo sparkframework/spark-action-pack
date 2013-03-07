@@ -3,9 +3,12 @@
 namespace Spark\ActionPack\Controller;
 
 use Silex\Application;
+
 use Symfony\Component\HttpFoundation\Response;
+
 use Spark\ActionPack\ApplicationAwareController;
 use Spark\ActionPack\ActionHelper;
+use Spark\ActionPack\View;
 
 abstract class Base implements ApplicationAwareController
 {
@@ -56,17 +59,19 @@ abstract class Base implements ApplicationAwareController
     function render($options = [])
     {
         $attributes = $this->request()->attributes;
-
-        if (!$options) {
-            $options['script'] = $attributes->get('controller') . '/' . $attributes->get('action');
-        }
+        $context = $this->application['spark.action_pack.view_context'];
 
         if (is_string($options)) {
             $script = $options;
-            $options = ['script' => $script];
+            $context->script = $script;
+            $options = [];
         }
 
-        $options['model'] = $this;
+        if (empty($options['script'])) {
+            $context->script = $attributes->get('controller') . '/' . $attributes->get('action');
+        }
+
+        $context->model = $this;
 
         if (isset($options['status'])) {
             $this->response()->setStatusCode($options['status']);
@@ -80,7 +85,21 @@ abstract class Base implements ApplicationAwareController
             $response = $this->response();
         }
 
-        return $this->application['spark.render_pipeline']->render($options, $response);
+        if ($this->renderLayout and @$options['layout'] !== false) {
+            $layout = $this->application['spark.action_pack.layout'];
+            $context->parent = clone $layout;
+
+            if (is_string($options['layout'])) {
+                $context->parent->script = $options['layout'];
+            }
+        }
+
+        $event = new View\RenderEvent($context, $options);
+        $event->setResponse($response);
+
+        $this->application['dispatcher']->dispatch(View\ViewEvents::RENDER, $event);
+
+        return $event->getResponse();
     }
 
     function rescue($exceptionClass, $method)

@@ -9,6 +9,7 @@ class RenderEvent extends EventDispatcher\Event
 {
     protected $options;
     protected $response;
+    protected $context;
 
     function __construct(ViewContext $context, array $options)
     {
