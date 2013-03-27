@@ -1,35 +1,22 @@
 <?php
 
-namespace Spark\ActionPack\EventListener;
+namespace Spark\ActionPack\Controller;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpKernel\Event\GetResponseEvent;
-use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-use Silex\Application;
 use Spark\ActionPack\ApplicationAwareController;
 
-class ControllerClassResolver implements EventSubscriberInterface
+class ControllerManager
 {
     protected $controllers = [];
-    protected $application;
     protected $modules = [];
     protected $defaultModule = "default";
+    protected $application;
 
-    static function getSubscribedEvents()
+    function __construct($application)
     {
-        return [
-            KernelEvents::REQUEST => [
-                # Register the listener after the kernel's RouterListener (32)
-                ["onKernelRequest", 31]
-            ]
-        ];
-    }
-
-    function __construct(Application $app)
-    {
-        $this->application = $app;
+        $this->application = $application;
     }
 
     function registerModule($module, $namespace)
@@ -43,9 +30,8 @@ class ControllerClassResolver implements EventSubscriberInterface
         $this->defaultModule = $module;
     }
 
-    function onKernelRequest(GetResponseEvent $event)
+    function processRequest(Request $request)
     {
-        $request = $event->getRequest();
         $current = $request->attributes->get('_controller');
         $moduleName = $request->attributes->get('module', $this->defaultModule);
 
@@ -72,7 +58,7 @@ class ControllerClassResolver implements EventSubscriberInterface
         $route = $this->application['routes']->get($request->attributes->get('_route'));
         $action = $this->camelize($actionName, false) . "Action";
 
-        $controller = $this->getController($controllerName, $moduleName);
+        $controller = $this->get($controllerName, $moduleName);
 
         if (null === $controller) {
             return;
@@ -107,7 +93,7 @@ class ControllerClassResolver implements EventSubscriberInterface
         return $camelized;
     }
 
-    function getController($name, $module = null)
+    function get($name, $module = null)
     {
         if (null === $module) {
             $module = $this->defaultModule;

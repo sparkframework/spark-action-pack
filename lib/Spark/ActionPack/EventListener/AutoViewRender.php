@@ -24,11 +24,10 @@ class AutoViewRender implements EventSubscriberInterface
         ];
     }
 
-    function __construct(EventDispatcherInterface $dispatcher, ControllerClassResolver $resolver, View\ViewContext $layout)
+    function __construct(EventDispatcherInterface $dispatcher, $app)
     {
         $this->dispatcher = $dispatcher;
-        $this->resolver = $resolver;
-        $this->layout = $layout;
+        $this->application = $app;
     }
 
     function renderView(GetResponseForControllerResultEvent $event)
@@ -53,7 +52,7 @@ class AutoViewRender implements EventSubscriberInterface
         $controllerName = $request->attributes->get('controller');
         $actionName = $request->attributes->get('action');
 
-        $controller = $this->resolver->getController($controllerName);
+        $controller = $this->application['spark.action_pack.controllers']->get($controllerName);
 
         if (!$controller) {
             return;
@@ -64,7 +63,7 @@ class AutoViewRender implements EventSubscriberInterface
         $context->model = $controller;
 
         if ($request->attributes->get('spark.action_pack.render_layout', true)) {
-            $context->parent = $this->layout;
+            $context->parent = $this->application['spark.action_pack.layout'];
         }
 
         $renderEvent = new View\RenderEvent($context, []);

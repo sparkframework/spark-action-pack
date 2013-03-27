@@ -4,6 +4,8 @@ namespace Spark\ActionPack;
 
 use Silex\Application;
 use CHH\FileUtils\PathStack;
+use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 
 class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
 {
@@ -20,10 +22,10 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
             return $layout;
         });
 
-        $app['spark.action_pack.controller_class_resolver'] = $app->share(function($app) {
-            $resolver = new EventListener\ControllerClassResolver($app);
+        $app['spark.action_pack.controllers'] = $app->share(function($app) {
+            $controllers = new Controller\ControllerManager($app);
 
-            return $resolver;
+            return $controllers;
         });
 
         $app['spark.action_pack.view.script_path'] = $app->share(function() use ($app) {
@@ -62,13 +64,14 @@ class ActionPackServiceProvider implements \Silex\ServiceProviderInterface
         });
 
         $app["dispatcher"] = $app->extend("dispatcher", function($dispatcher, $app) {
-            $dispatcher->addSubscriber($app['spark.action_pack.controller_class_resolver']);
+            $dispatcher->addListener(KernelEvents::REQUEST, function(GetResponseEvent $event) use ($app) {
+                $request = $event->getRequest();
 
-            $dispatcher->addSubscriber(new EventListener\AutoViewRender(
-                $dispatcher,
-                $app['spark.action_pack.controller_class_resolver'],
-                $app['spark.action_pack.layout']
-            ));
+                $controllers = $app['spark.action_pack.controllers'];
+                $controllers->processRequest($request);
+            }, 31);
+
+            $dispatcher->addSubscriber(new EventListener\AutoViewRender($dispatcher, $app));
 
             # Register default view rendering strategies
             $dispatcher->addSubscriber(new View\JsonStrategy);
